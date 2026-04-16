@@ -1,0 +1,7 @@
+{
+    "elixium.ollamaUrl": "http://192.168.86.36:11434/v1",
+    "elixium.model": "gemma-4-26B-A4B-it-Q4_K_XL.gguf",
+    "elixium.models.deep": "gemma-4-26B-A4B-it-Q4_K_XL.gguf",
+    "elixium.models.default": "gemma-4-26B-A4B-it-Q4_K_XL.gguf",
+    "elixium.models.fast": "gemma-4-26B-A4B-it-Q4_K_XL.gguf"
+}

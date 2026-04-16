@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "project": {
+    "project": {
+      "name": "EF2Test",
+      "type": "unknown",
+      "detected_at": "2026-04-16T14:42:15.778Z"
+    },
+    "key_files": [],
+    "architecture": "",
+    "learned": [],
+    "preferences": []
+  },
+  "tasks": [],
+  "conversation": {
+    "last_goal": "",
+    "last_outcome": "",
+    "last_timestamp": "",
+    "pending_work": "",
+    "key_findings": []
+  }
+}
