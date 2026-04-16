@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Elixium | AI Cost Intelligence Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --elixium-indigo: #4f46e5;
+            --elixium-teal: #0d9488;
+        }
+        body {
+            background-color: #f8fafc;
+            font-family: 'Inter', sans-serif;
+        }
+        .tab-active {
+            border-bottom: 2px solid var(--elixium-teal);
+            color: var(--elixium-teal);
+        }
+        .card {
+            background: white;
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+        }
+        .accent-text { color: var(--elixium-teal); }
+        .accent-bg { background-color: var(--elixium-teal); }
+        .indigo-bg { background-color: var(--elixium-indigo); }
+    </style>
+</head>
+<body class="text-slate-800">
+    <nav class="bg-white border-b border-slate-200 px-6 py-4">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <div class="flex items-center space-x-2">
+                <div class="w-8 h-8 accent-bg rounded-lg"></div>
+                <span class="text-xl font-bold tracking-tight text-slate-900">ELIXIUM <span class="font-light text-slate-500">Cost Intelligence</span></span>
+            </div>
+            <div class="text-sm text-slate-500 font-medium">Enterprise AI Governance</div>
+        </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto px-6 py-8">
+        <!-- Tabs Navigation -->
+        <div class="flex space-x-8 border-b border-slate-200 mb-8">
+            <button onclick="switchTab('modeler')" id="tab-modeler" class="pb-4 px-1 text-sm font-semibold tab-active transition-all">Cost Modeler</button>
+            <button onclick="switchTab('matrix')" id="tab-matrix" class="pb-4 px-1 text-sm font-semibold text-slate-500 hover:text-slate-700 transition-all">Provider Matrix</button>
+            <button onclick="switchTab('strategy')" id="tab-strategy" class="pb-4 px-1 text-sm font-semibold text-slate-500 hover:text-slate-700 transition-all">Monitoring Strategy</button>
+        </div>
+
+        <!-- Tab 1: Cost Modeler -->
+        <div id="content-modeler" class="space-y-8">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <!-- Inputs Panel -->
+                <div class="card p-6 space-y-6">
+                    <h3 class="text-lg font-bold text-slate-900 border-b pb-2">Configuration</h3>
+                    
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Team Size: <span id="val-team-size" class="font-bold accent-text">50</span> devs</label>
+                            <input type="range" id="input-team-size" min="2" max="200" value="50" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-teal-600">
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Deployment</label>
+                            <select id="input-deployment" class="w-full p-2 border border-slate-300 rounded-md text-sm">
+                                <option value="saas">Cloud SaaS</option>
+                                <option value="self">Self-hosted</option>
+                                <option value="airgap">Air-gapped</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">AI Provider</label>
+                            <select id="input-provider" class="w-full p-2 border border-slate-300 rounded-md text-sm">
+                                <option value="anthropic">Anthropic</option>
+                                <option value="bedrock">AWS Bedrock</option>
+                                <option value="vertex">GCP Vertex</option>
+                                <option value="azure">Azure OpenAI</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">IDE / Agent</label>
+                            <select id="input-ide" class="w-full p-2 border border-slate-300 rounded-md text-sm">
+                                <option value="claude">Claude Code</option>
+                                <option value="cursor">Cursor</option>
+                                <option value="copilot">GitHub Copilot</option>
+                                <option value="windsurf">Windsurf</option>
+                                <option value="mixed">Mixed</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Usage Intensity</label>
+                            <div class="grid grid-cols-3 gap-2">
+                                <button onclick="setIntensity('light')" class="intensity-btn p-2 text-xs border rounded border-slate-300 hover:border-teal-500" data-val="light">Light</button>
+                                <button onclick="setIntensity('moderate')" class="intensity-btn p-2 text-xs border rounded border-teal-500 bg-teal-50" data-val="moderate">Moderate</button>
+                                <button onclick="setIntensity('heavy')" class="intensity-btn p-2 text-xs border rounded border-slate-300 hover:border-teal-500" data-val="heavy">Heavy</button>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Model</label>
+                            <select id="input-model" class="w-full p-2 border border-slate-300 rounded-md text-sm">
+                                <!-- Dynamic -->
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Results Panel -->
+                <div class="lg:col-span-2 space-y-6">
+                    <!-- Metric Cards -->
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div class="card p-4 border-l-4 border-indigo-500">
+                            <div class="text-xs text-slate-500 font-semibold uppercase">Elixium API</div>
+                            <div class="text-xl font-bold text-slate-900" id="card-elixium-api">$0</div>
+                        </div>
+                        <div class="card p-4 border-l-4 border-teal-500">
+                            <div class="text-xs text-slate-500 font-semibold uppercase">IDE/Agent API</div>
+                            <div class="text-xl font-bold text-slate-900" id="card-ide-api">$0</div>
+                        </div>
+                        <div class="card p-4 border-l-4 border-slate-400">
+                            <div class="text-xs text-slate-500 font-semibold uppercase">Elixium License</div>
+                            <div class="text-xl font-bold text-slate-900" id="card-license">$0</div>
+                        </div>
+                        <div class="card p-4 border-l-4 border-orange-500 bg-slate-50">
+                            <div class="text-xs text-slate-500 font-semibold uppercase">Total Monthly</div>
+                            <div class="text-xl font-bold text-slate-900" id="card-total">$0</div>
+                        </div>
+                    </div>
+
+                    <!-- Chart & Breakdown -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="card p-6">
+                            <h4 class="text-sm font-bold text-slate-700 mb-4">Cost Distribution</h4>
+                            <div class="h-48">
+                                <canvas id="costChart"></canvas>
+                            </div>
+                        </div>
+                        <div class="card p-6">
+                            <h4 class="text-sm font-bold text-slate-700 mb-4">Feature Breakdown</h4>
+                            <ul class="space-y-3 text-sm" id="feature-list">
+                                <!-- Dynamic -->
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab 2: Provider Matrix -->
+        <div id="content-matrix" class="hidden space-y-8">
+            <div class="card overflow-hidden">
+                <table class="w-full text-left text-sm">
+                    <thead class="bg-slate-50 border-b border-slate-200">
+                        <tr>
+                            <th class="px-6 py-4 font-semibold text-slate-700">Provider</th>
+                            <th class="px-6 py-4 font-semibold text-slate-700">Model</th>
+                            <th class="px-6 py-4 font-semibold text-slate-700">Input (per MTok)</th>
+                            <th class="px-6 py-4 font-semibold text-slate-700">Output (per MTok)</th>
+                            <th class="px-6 py-4 font-semibold text-slate-700">Compliance</th>
+                        </tr>
+                    </thead>
+                    <tbody id="matrix-body" class="divide-y divide-slate-100">
+                        <!-- Dynamic -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Tab 3: Monitoring Strategy -->
+        <div id="content-strategy" class="hidden space-y-8">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div class="card p-6 text-center">
+                    <div class="w-12 h-12 accent-bg rounded-full flex items-center justify-center mx-auto mb-4 text-white">📅</div>
+                    <h4 class="font-bold text-slate-900">Weekly Automated</h4>
+                    <p class="text-xs text-slate-500 mt-2">Automated cost drift detection and anomaly reporting.</p>
+                </div>
+                <div class="card p-6 text-center">
+                    <div class="w-12 h-12 accent-bg rounded-full flex items-center justify-center mx-auto mb-4 text-white">📊</div>
+                    <h4 class="font-bold text-slate-900">Monthly Delivery</h4>
+                    <p class="text-xs text-slate-500 mt-2">Executive summary of ROI and usage efficiency.</p>
+                </div>
+                <div class="card p-6 text-center">
+                    <div class="w-12 h-12 accent-bg rounded-full flex items-center justify-center mx-auto mb-4 text-white">🚨</div>
+                    <h4 class="font-bold text-slate-900">Immediate Alert</h4>
+                    <p class="text-xs text-slate-500 mt-2">Real-time threshold alerts via Slack/Email.</p>
+                </div>
+                <div class="card p-6 text-center">
+                    <div class="w-12 h-12 accent-bg rounded-full flex items-center justify-center mx-auto mb-4 text-white">🔍</div>
+                    <h4 class="font-bold text-slate-900">Quarterly Review</h4>
+                    <p class="text-xs text-slate-500 mt-2">Strategic alignment and provider optimization.</p>
+                </div>
+            </div>
+
+            <div class="card p-6">
+                <h3 class="text-lg font-bold text-slate-900 mb-4">Provider-Specific Monitoring Surfaces</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div class="space-y-4">
+                        <h4 class="font-semibold text-teal-700">Cloud Native (AWS/GCP/Azure)</h4>
+                        <ul class="text-sm space-y-2 text-slate-600">
+                            <li>• CloudWatch / Stackdriver Cost Explorer</li>
+                            <li>• Azure Cost Management + Billing</li>
+                            <li>• Granular API usage tagging</li>
+                        </ul>
+                    </div>
+                    <div class="space-y-4">
+                        <h4 class="font-semibold text-teal-700">Model-Centric (Anthropic/OpenAI)</h4>
+                        <ul class="text-sm space-y-2 text-slate-600">
+                            <li>• Token consumption per request</li>
+                            <li>• Model-specific latency/cost correlation</li>
+                            <li>• Prompt/Completion ratio tracking</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // --- DATA ---
+        const PRICING = {
+            anthropic: [
+                { name: 'Claude 3.5 Sonnet', in: 3, out: 15 },
+                { name: 'Claude 3 Haiku', in: 0.25, out: 1.25 },
+                { name: 'Claude 3 Opus', in: 15, out: 75 }
+            ],
+            bedrock: [
+                { name: 'Claude 3.5 Sonnet', in: 3, out: 15 },
+                { name: 'Claude 3 Haiku', in: 0.25, out: 1.25 },
+                { name: 'Claude 3 Opus', in: 15, out: 75 },
+                { name: 'Amazon Nova Pro', in: 0.80, out: 3.20 },
+                { name: 'Llama 3.1 70B', in: 0.99, out: 0.99 },
+                { name: 'Amazon Titan', in: 0.20, out: 0.60 }
+            ],
+            vertex: [
+                { name: 'Gemini 1.5 Flash', in: 0.10, out: 0.40 },
+                { name: 'Gemini 1.5 Pro', in: 1.25, out: 5.00 },
+                { name: 'Gemini 2.0 Pro', in: 1.25, out: 10.00 }
+            ],
+            azure: [
+                { name: 'GPT-4o', in: 2.50, out: 10.00 },
+                { name: 'GPT-4o mini', in: 0.15, out: 0.60 },
+                { name: 'o3-mini', in: 1.10, out: 4.40 }
+            ]
+        };
+
+        const COMPLIANCE = {
+            anthropic: 'SOC2, HIPAA',
+            bedrock: 'SOC2, HIPAA, FedRAMP',
+            vertex: 'SOC2, HIPAA, ISO',
+            azure: 'SOC2, HIPAA, FedRAMP'
+        };
+
+        const FEATURES = [
+            { name: 'Code Generation', inTokens: 2000, outTokens: 800 },
+            { name: 'Unit Test Creation', inTokens: 1500, outTokens: 1200 },
+            { name: 'Documentation', inTokens: 3000, outTokens: 500 },
+            { name: 'Refactoring', inTokens: 5000, outTokens: 2000 },
+            { name: 'Code Review', inTokens: 4000, outTokens: 1000 }
+        ];
+
+        // --- STATE ---
+        let currentIntensity = 'moderate';
+        let chart = null;
+
+        const intensityMultipliers = {
+            light: 0.5,
+            moderate: 1.0,
+            heavy: 2.5
+        };
+
+        // --- DOM ELEMENTS ---
+        const inputs = {
+            teamSize: document.getElementById('input-team-size'),
+            deployment: document.getElementById('input-deployment'),
+            provider: document.getElementById('input-provider'),
+            ide: document.getElementById('input-ide'),
+            model: document.getElementById('input-model')
+        };
+
+        const displays = {
+            teamSize: document.getElementById('val-team-size'),
+            elixiumApi: document.getElementById('card-elixium-api'),
+            ideApi: document.getElementById('card-ide-api'),
+            license: document.getElementById('card-license'),
+            total: document.getElementById('card-total'),
+            featureList: document.getElementById('feature-list'),
+            matrixBody: document.getElementById('matrix-body')
+        };
+
+        // --- LOGIC ---
+
+        function init() {
+            // Event Listeners
+            inputs.teamSize.addEventListener('input', (e) => {
+                displays.teamSize.textContent = e.target.value;
+                calculate();
+            });
+            inputs.deployment.addEventListener('change', calculate);
+            inputs.provider.addEventListener('change', updateModelOptions);
+            inputs.ide.addEventListener('change', calculate);
+            inputs.model.addEventListener('change', calculate);
+
+            // Initial Setup
+            updateModelOptions();
+            populateMatrix();
+            calculate();
+        }
+
+        function setIntensity(val) {
+            currentIntensity = val;
+            document.querySelectorAll('.intensity-btn').forEach(btn => {
+                if (btn.dataset.val === val) {
+                    btn.classList.add('border-teal-500', 'bg-teal-50');
+                    btn.classList.remove('border-slate-300');
+                } else {
+                    btn.classList.remove('border-teal-500', 'bg-teal-50');
+                    btn.classList.add('border-slate-300');
+                }
+            });
+            calculate();
+        }
+
+        function updateModelOptions() {
+            const provider = inputs.provider.value;
+            const models = PRICING[provider];
+            inputs.model.innerHTML = '';
+            models.forEach(m => {
+                const opt = document.createElement('option');
+                opt.value = m.name;
+                opt.textContent = m.name;
+                inputs.model.appendChild(opt);
+            });
+            calculate();
+        }
+
+        function populateMatrix() {
+            let html = '';
+            Object.keys(PRICING).forEach(p => {
+                PRICING[p].forEach(m => {
+                    html += `
+                        <tr>
+                            <td class="px-6 py-4 font-medium text-slate-900 capitalize">${p}</td>
+                            <td class="px-6 py-4 text-slate-600">${m.name}</td>
+                            <td class="px-6 py-4 text-slate-600">$${m.in}/M</td>
+                            <td class="px-6 py-4 text-slate-600">$${m.out}/M</td>
+                            <td class="px-6 py-4"><span class="px-2 py-1 bg-teal-50 text-teal-700 rounded text-xs font-semibold">${COMPLIANCE[p]}</span></td>
+                        </tr>
+                    `;
+                });
+            });
+            displays.matrixBody.innerHTML = html;
+        }
+
+        function calculate() {
+            const teamSize = parseInt(inputs.teamSize.value);
+            const providerKey = inputs.provider.value;
+            const modelName = inputs.model.value;
+            const multiplier = intensityMultipliers[currentIntensity];
+
+            // Find selected model pricing
+            const modelData = PRICING[providerKey].find(m => m.name === modelName) || { in: 0, out: 0 };
+
+            // Base usage per dev per month (tokens)
+            // We assume a developer makes ~20 requests/day, 22 days/month
+            // Each request has avg tokens based on features
+            const baseRequestsPerMonth = 22 * 20;
+            
+            let totalInTokens = 0;
+            let totalOutTokens = 0;
+            let featureCosts = [];
+
+            FEATURES.forEach(f => {
+                const fIn = f.inTokens * baseRequestsPerMonth * teamSize * multiplier;
+                const fOut = f.outTokens * baseRequestsPerMonth * teamSize * multiplier;
+                const cost = (fIn / 1_000_000 * modelData.in) + (fOut / 1_000_000 * modelData.out);
+                
+                totalInTokens += fIn;
+                totalOutTokens += fOut;
+                featureCosts.push({ name: f.name, cost: cost });
+            });
+
+            const ideApiCost = (totalInTokens / 1_000_000 * modelData.in) + (totalOutTokens / 1_000_000 * modelData.out);
+            
+            // Elixium Platform API cost (simulated as 15% of IDE cost for orchestration/context)
+            const elixiumApiCost = ideApiCost * 0.15;
+            
+            // Elixium License
+            const licenseCost = teamSize * 49;
+
+            const totalMonthly = elixiumApiCost + ideApiCost + licenseCost;
+
+            // Update UI
+            displays.elixiumApi.textContent = `$${elixiumApiCost.toLocaleString(undefined, {maximumFractionDigits: 0})}`;
+            displays.ideApi.textContent = `$${ideApiCost.toLocaleString(undefined, {maximumFractionDigits: 0})}`;
+            displays.license.textContent = `$${licenseCost.toLocaleString()}`;
+            displays.total.textContent = `$${totalMonthly.toLocaleString(undefined, {maximumFractionDigits: 0})}`;
+
+            // Update Feature List
+            displays.featureList.innerHTML = featureCosts.map(f => `
+                <li class="flex justify-between items-center">
+                    <span class="text-slate-600">${f.name}</span>
+                    <span class="font-medium text-slate-900">$${f.cost.toLocaleString(undefined, {maximumFractionDigits: 0})}</span>
+                </li>
+            `).join('');
+
+            updateChart(elixiumApiCost, ideApiCost, licenseCost);
+        }
+
+        function updateChart(elixium, ide, license) {
+            const ctx = document.getElementById('costChart').getContext('2d');
+            
+            if (chart) {
+                chart.data.datasets[0].data = [elixium, ide, license];
+                chart.update();
+            } else {
+                chart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['Elixium API', 'IDE/Agent', 'License'],
+                        datasets: [{
+                            data: [elixium, ide, license],
+                            backgroundColor: ['#4f46e5', '#0d9488', '#94a3b8'],
+                            borderRadius: 6
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            y: { beginAtZero: true, grid: { display: false } },
+                            x: { grid: { display: false } }
+                        }
+                    }
+                });
+            }
+        }
+
+        function switchTab(tabId) {
+            // Hide all
+            document.getElementById('content-modeler').classList.add('hidden');
+            document.getElementById('content-matrix').classList.add('hidden');
+            document.getElementById('content-strategy').classList.add('hidden');
+            
+            // Reset tabs
+            document.getElementById('tab-modeler').classList.remove('tab-active');
+            document.getElementById('tab-modeler').classList.add('text-slate-500');
+            document.getElementById('tab-matrix').classList.remove('tab-active');
+            document.getElementById('tab-matrix').classList.add('text-slate-500');
+            document.getElementById('tab-strategy').classList.remove('tab-active');
+            document.getElementById('tab-strategy').classList.add('text-slate-500');
+
+            // Show selected
+            document.getElementById('content-' + tabId).classList.remove('hidden');
+            document.getElementById('tab-' + tabId).classList.add('tab-active');
+            document.getElementById('tab-' + tabId).classList.remove('text-slate-500');
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>
